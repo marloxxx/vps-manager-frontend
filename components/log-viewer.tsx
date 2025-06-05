@@ -7,8 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { RefreshCw, Download, FileText, AlertTriangle } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+import { apiClient } from "@/lib/api"
 
 export function LogViewer() {
   const [logs, setLogs] = useState<string[]>([])
@@ -22,16 +21,8 @@ export function LogViewer() {
   const fetchLogs = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem("auth_token")
-      const response = await fetch(`${API_URL}/api/system/nginx/logs?log_type=${logType}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setLogs(data.logs || [])
-      }
+      const data = await apiClient.getNginxLogs(logType)
+      setLogs(data.logs || [])
     } catch (error) {
       toast({
         title: "Error",
@@ -76,6 +67,7 @@ export function LogViewer() {
     }
   }
 
+  // Rest of the component remains the same...
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">

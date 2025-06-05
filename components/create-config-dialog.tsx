@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Trash2, Globe, Zap } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { apiClient } from "@/lib/api"
 
 interface ProxyLocation {
   path: string
@@ -91,24 +92,14 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
         locations: locations.filter((loc) => loc.path && loc.backend),
       }
 
-      const response = await fetch("/api/configs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
+      await apiClient.createConfig(config)
+      toast({
+        title: "Success",
+        description: "Configuration created successfully",
       })
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Configuration created successfully",
-        })
-        onConfigCreated()
-        onOpenChange(false)
-        resetForm()
-      } else {
-        const error = await response.json()
-        throw new Error(error.detail || "Failed to create configuration")
-      }
+      onConfigCreated()
+      onOpenChange(false)
+      resetForm()
     } catch (error) {
       toast({
         title: "Error",
@@ -149,6 +140,7 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
     setFormData({ ...formData, id })
   }
 
+  // Rest of the component remains the same...
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">

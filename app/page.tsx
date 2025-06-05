@@ -16,8 +16,7 @@ import { ConfigTemplates } from "@/components/config-templates"
 import { LoadBalancer } from "@/components/load-balancer"
 import { Navbar } from "@/components/navbar"
 import { useAuth } from "@/components/auth-provider"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+import { apiClient } from "@/lib/api"
 
 export default function Dashboard() {
   const [configs, setConfigs] = useState([])
@@ -37,16 +36,8 @@ export default function Dashboard() {
 
   const fetchConfigs = async () => {
     try {
-      const token = localStorage.getItem("auth_token")
-      const response = await fetch(`${API_URL}/api/configs`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setConfigs(data)
-      }
+      const data = await apiClient.getConfigs()
+      setConfigs(data)
     } catch (error) {
       console.error("Failed to fetch configs:", error)
     } finally {
@@ -56,16 +47,8 @@ export default function Dashboard() {
 
   const fetchSystemStats = async () => {
     try {
-      const token = localStorage.getItem("auth_token")
-      const response = await fetch(`${API_URL}/api/system/status`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setSystemStats(data)
-      }
+      const data = await apiClient.getSystemStatus()
+      setSystemStats(data)
     } catch (error) {
       console.error("Failed to fetch system stats:", error)
     }
@@ -86,7 +69,7 @@ export default function Dashboard() {
     return null // Will redirect to login
   }
 
-  const activeConfigs = configs.filter((config: any) => config.is_active).length
+  const activeConfigs = configs.filter((config) => config.is_active).length
   const totalConfigs = configs.length
 
   return (

@@ -10,6 +10,7 @@ const nextConfig = {
     domains: ["localhost"],
     unoptimized: true,
   },
+  // Remove the rewrites since we're using direct API calls
 }
 
 module.exports = nextConfig

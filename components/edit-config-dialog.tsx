@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Trash2, Save } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { apiClient } from "@/lib/api"
 
 interface EditConfigDialogProps {
   config: any
@@ -41,23 +42,13 @@ export function EditConfigDialog({ config, open, onOpenChange, onConfigUpdated }
     setLoading(true)
 
     try {
-      const response = await fetch(`/api/configs/${config.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+      await apiClient.updateConfig(config.id, formData)
+      toast({
+        title: "Success",
+        description: "Configuration updated successfully",
       })
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Configuration updated successfully",
-        })
-        onConfigUpdated()
-        onOpenChange(false)
-      } else {
-        const error = await response.json()
-        throw new Error(error.detail || "Failed to update configuration")
-      }
+      onConfigUpdated()
+      onOpenChange(false)
     } catch (error) {
       toast({
         title: "Error",

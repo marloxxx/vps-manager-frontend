@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Shield, Globe } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import Image from "next/image"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
@@ -48,9 +50,13 @@ export default function LoginPage() {
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center">
-              <Shield className="w-12 h-12 text-white" />
-            </div>
+            <Image
+              src="/images/logo.png"
+              alt="Surveyor Indonesia"
+              width={120}
+              height={120}
+              className="object-contain"
+            />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">VPS Manager</h1>
           <p className="text-gray-600">Surveyor Indonesia</p>

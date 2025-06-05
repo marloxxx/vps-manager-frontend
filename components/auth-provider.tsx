@@ -4,6 +4,7 @@ import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
+import { apiClient } from "@/lib/api"
 
 interface User {
   id: string
@@ -47,21 +48,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      const response = await fetch("/api/auth/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        const userData = await response.json()
-        setUser(userData)
-      } else {
-        localStorage.removeItem("auth_token")
-      }
+      apiClient.setToken(token)
+      const userData = await apiClient.getCurrentUser()
+      setUser(userData)
     } catch (error) {
       console.error("Auth check failed:", error)
       localStorage.removeItem("auth_token")
+      apiClient.setToken(null)
     } finally {
       setLoading(false)
     }
@@ -69,22 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        localStorage.setItem("auth_token", data.token)
-        setUser(data.user)
-        router.push("/")
-        return true
-      }
-      return false
+      const data = await apiClient.login(username, password)
+      apiClient.setToken(data.token)
+      setUser(data.user)
+      router.push("/")
+      return true
     } catch (error) {
       console.error("Login failed:", error)
       return false
@@ -93,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem("auth_token")
+    apiClient.setToken(null)
     setUser(null)
     router.push("/login")
   }

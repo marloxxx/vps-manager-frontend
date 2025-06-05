@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Download, Upload, Trash2, RefreshCw, Archive, FileText } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { apiClient } from "@/lib/api"
 
 interface BackupFile {
   filename: string
@@ -39,11 +40,8 @@ export function BackupRestore() {
   const fetchBackups = async () => {
     setLoading(true)
     try {
-      const response = await fetch("/api/backup/list")
-      if (response.ok) {
-        const data = await response.json()
-        setBackups(data.backups || [])
-      }
+      const data = await apiClient.getBackups()
+      setBackups(data.backups || [])
     } catch (error) {
       console.error("Failed to fetch backups:", error)
     } finally {
@@ -58,19 +56,12 @@ export function BackupRestore() {
   const createBackup = async () => {
     setCreating(true)
     try {
-      const response = await fetch("/api/backup/create", {
-        method: "POST",
+      await apiClient.createBackup()
+      toast({
+        title: "Success",
+        description: "Backup created successfully",
       })
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Backup created successfully",
-        })
-        fetchBackups()
-      } else {
-        throw new Error("Failed to create backup")
-      }
+      fetchBackups()
     } catch (error) {
       toast({
         title: "Error",
@@ -84,18 +75,15 @@ export function BackupRestore() {
 
   const downloadBackup = async (filename: string) => {
     try {
-      const response = await fetch(`/api/backup/download/${filename}`)
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = filename
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-      }
+      const blob = await apiClient.downloadBackup(filename)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
     } catch (error) {
       toast({
         title: "Error",
@@ -107,18 +95,11 @@ export function BackupRestore() {
 
   const restoreBackup = async (filename: string) => {
     try {
-      const response = await fetch(`/api/backup/restore/${filename}`, {
-        method: "POST",
+      await apiClient.restoreBackup(filename)
+      toast({
+        title: "Success",
+        description: "Backup restored successfully",
       })
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Backup restored successfully",
-        })
-      } else {
-        throw new Error("Failed to restore backup")
-      }
     } catch (error) {
       toast({
         title: "Error",
@@ -131,19 +112,12 @@ export function BackupRestore() {
 
   const deleteBackup = async (filename: string) => {
     try {
-      const response = await fetch(`/api/backup/delete/${filename}`, {
-        method: "DELETE",
+      await apiClient.deleteBackup(filename)
+      toast({
+        title: "Success",
+        description: "Backup deleted successfully",
       })
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Backup deleted successfully",
-        })
-        fetchBackups()
-      } else {
-        throw new Error("Failed to delete backup")
-      }
+      fetchBackups()
     } catch (error) {
       toast({
         title: "Error",
@@ -189,6 +163,7 @@ export function BackupRestore() {
     return new Date(dateString).toLocaleString()
   }
 
+  // Rest of the component remains the same...
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -241,23 +216,6 @@ export function BackupRestore() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Upload Backup */}
-      {/* <Card>
-        <CardHeader>
-          <CardTitle>Upload Backup</CardTitle>
-          <CardDescription>Upload a previously downloaded backup file to restore configurations</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <Input type="file" accept=".json,.zip" className="flex-1" />
-            <Button>
-              <Upload className="h-4 w-4 mr-2" />
-              Upload & Restore
-            </Button>
-          </div>
-        </CardContent>
-      </Card> */}
 
       {/* Restore Section */}
       <Card>

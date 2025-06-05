@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { RefreshCw, Server, HardDrive, Cpu, MemoryStick, Network, AlertTriangle } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { apiClient } from "@/lib/api"
 
 interface SystemStatusProps {
   systemStats: any
@@ -19,14 +20,11 @@ export function SystemStatus({ systemStats }: SystemStatusProps) {
   const refreshStatus = async () => {
     setLoading(true)
     try {
-      const response = await fetch("/api/system/status")
-      if (response.ok) {
-        const data = await response.json()
-        toast({
-          title: "Status Updated",
-          description: "System status refreshed successfully",
-        })
-      }
+      await apiClient.getSystemStatus()
+      toast({
+        title: "Status Updated",
+        description: "System status refreshed successfully",
+      })
     } catch (error) {
       toast({
         title: "Error",
@@ -40,13 +38,11 @@ export function SystemStatus({ systemStats }: SystemStatusProps) {
 
   const restartNginx = async () => {
     try {
-      const response = await fetch("/api/system/nginx/restart", { method: "POST" })
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Nginx restarted successfully",
-        })
-      }
+      await apiClient.restartNginx()
+      toast({
+        title: "Success",
+        description: "Nginx restarted successfully",
+      })
     } catch (error) {
       toast({
         title: "Error",
@@ -58,13 +54,11 @@ export function SystemStatus({ systemStats }: SystemStatusProps) {
 
   const reloadNginx = async () => {
     try {
-      const response = await fetch("/api/system/nginx/reload", { method: "POST" })
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Nginx configuration reloaded successfully",
-        })
-      }
+      await apiClient.reloadNginx()
+      toast({
+        title: "Success",
+        description: "Nginx configuration reloaded successfully",
+      })
     } catch (error) {
       toast({
         title: "Error",
@@ -77,11 +71,8 @@ export function SystemStatus({ systemStats }: SystemStatusProps) {
   useEffect(() => {
     const fetchNginxLogs = async () => {
       try {
-        const response = await fetch("/api/system/nginx/logs")
-        if (response.ok) {
-          const data = await response.json()
-          setNginxLogs(data.logs || [])
-        }
+        const data = await apiClient.getNginxLogs()
+        setNginxLogs(data.logs || [])
       } catch (error) {
         console.error("Failed to fetch Nginx logs:", error)
       }
@@ -90,6 +81,7 @@ export function SystemStatus({ systemStats }: SystemStatusProps) {
     fetchNginxLogs()
   }, [])
 
+  // Rest of the component remains the same...
   return (
     <div className="space-y-6">
       {/* System Overview */}
@@ -225,8 +217,7 @@ export function SystemStatus({ systemStats }: SystemStatusProps) {
           <Button
             onClick={async () => {
               try {
-                const response = await fetch("/api/system/nginx/test", { method: "POST" })
-                const result = await response.json()
+                const result = await apiClient.testNginx()
                 toast({
                   title: result.success ? "Configuration Valid" : "Configuration Error",
                   description: result.message,

@@ -20,6 +20,7 @@ import { MoreHorizontal, Edit, Trash2, Eye, Copy, TestTube, BarChart3 } from "lu
 import { EditConfigDialog } from "./edit-config-dialog"
 import { ConfigDetailsDialog } from "./config-details-dialog"
 import { toast } from "@/hooks/use-toast"
+import { apiClient } from "@/lib/api"
 
 interface Config {
   id: string
@@ -48,19 +49,12 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
 
   const handleToggleActive = async (config: Config) => {
     try {
-      const response = await fetch(`/api/configs/${config.id}/toggle`, {
-        method: "POST",
+      await apiClient.toggleConfig(config.id)
+      toast({
+        title: "Success",
+        description: `Configuration ${config.is_active ? "disabled" : "enabled"} successfully`,
       })
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: `Configuration ${config.is_active ? "disabled" : "enabled"} successfully`,
-        })
-        onConfigsChange()
-      } else {
-        throw new Error("Failed to toggle configuration")
-      }
+      onConfigsChange()
     } catch (error) {
       toast({
         title: "Error",
@@ -72,19 +66,12 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
 
   const handleDelete = async (config: Config) => {
     try {
-      const response = await fetch(`/api/configs/${config.id}`, {
-        method: "DELETE",
+      await apiClient.deleteConfig(config.id)
+      toast({
+        title: "Success",
+        description: "Configuration deleted successfully",
       })
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Configuration deleted successfully",
-        })
-        onConfigsChange()
-      } else {
-        throw new Error("Failed to delete configuration")
-      }
+      onConfigsChange()
     } catch (error) {
       toast({
         title: "Error",
@@ -106,21 +93,12 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
       delete newConfig.created_at
       delete newConfig.updated_at
 
-      const response = await fetch("/api/configs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newConfig),
+      await apiClient.createConfig(newConfig)
+      toast({
+        title: "Success",
+        description: "Configuration duplicated successfully",
       })
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Configuration duplicated successfully",
-        })
-        onConfigsChange()
-      } else {
-        throw new Error("Failed to duplicate configuration")
-      }
+      onConfigsChange()
     } catch (error) {
       toast({
         title: "Error",
@@ -132,18 +110,12 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
 
   const handleTest = async (config: Config) => {
     try {
-      const response = await fetch(`/api/configs/${config.id}/test`, {
-        method: "POST",
+      const result = await apiClient.testConfig(config.id)
+      toast({
+        title: "Test Result",
+        description: result.success ? "Configuration test passed" : `Test failed: ${result.error}`,
+        variant: result.success ? "default" : "destructive",
       })
-
-      if (response.ok) {
-        const result = await response.json()
-        toast({
-          title: "Test Result",
-          description: result.success ? "Configuration test passed" : `Test failed: ${result.error}`,
-          variant: result.success ? "default" : "destructive",
-        })
-      }
     } catch (error) {
       toast({
         title: "Error",
@@ -153,6 +125,7 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
     }
   }
 
+  // Rest of the component remains the same...
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -223,7 +196,9 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
                         <TestTube className="h-4 w-4 mr-2" />
                         Test Config
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => window.open(`/api/configs/${config.id}/metrics`, "_blank")}>
+                      <DropdownMenuItem
+                        onClick={() => window.open(`${apiClient.baseUrl}/api/configs/${config.id}/metrics`, "_blank")}
+                      >
                         <BarChart3 className="h-4 w-4 mr-2" />
                         View Metrics
                       </DropdownMenuItem>
