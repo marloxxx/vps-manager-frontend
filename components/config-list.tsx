@@ -16,12 +16,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { MoreHorizontal, Edit, Trash2, Eye, Copy, TestTube } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, Eye, Copy, TestTube, BarChart3 } from "lucide-react"
 import { EditConfigDialog } from "./edit-config-dialog"
 import { ConfigDetailsDialog } from "./config-details-dialog"
 import { toast } from "@/hooks/use-toast"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 interface Config {
   id: string
@@ -50,12 +48,8 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
 
   const handleToggleActive = async (config: Config) => {
     try {
-      const token = localStorage.getItem("auth_token")
-      const response = await fetch(`${API_URL}/api/configs/${config.id}/toggle`, {
+      const response = await fetch(`/api/configs/${config.id}/toggle`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       })
 
       if (response.ok) {
@@ -78,12 +72,8 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
 
   const handleDelete = async (config: Config) => {
     try {
-      const token = localStorage.getItem("auth_token")
-      const response = await fetch(`${API_URL}/api/configs/${config.id}`, {
+      const response = await fetch(`/api/configs/${config.id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       })
 
       if (response.ok) {
@@ -113,16 +103,12 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
         server_name: `${config.server_name}_copy`,
         is_active: false,
       }
-      delete (newConfig as any).created_at
-      delete (newConfig as any).updated_at
+      delete newConfig.created_at
+      delete newConfig.updated_at
 
-      const token = localStorage.getItem("auth_token")
-      const response = await fetch(`${API_URL}/api/configs`, {
+      const response = await fetch("/api/configs", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newConfig),
       })
 
@@ -146,12 +132,8 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
 
   const handleTest = async (config: Config) => {
     try {
-      const token = localStorage.getItem("auth_token")
-      const response = await fetch(`${API_URL}/api/configs/${config.id}/test`, {
+      const response = await fetch(`/api/configs/${config.id}/test`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       })
 
       if (response.ok) {
@@ -240,6 +222,10 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
                       <DropdownMenuItem onClick={() => handleTest(config)}>
                         <TestTube className="h-4 w-4 mr-2" />
                         Test Config
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => window.open(`/api/configs/${config.id}/metrics`, "_blank")}>
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        View Metrics
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setDeletingConfig(config)} className="text-red-600">
                         <Trash2 className="h-4 w-4 mr-2" />

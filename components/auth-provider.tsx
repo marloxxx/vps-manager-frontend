@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
@@ -20,8 +21,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -48,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      const response = await fetch(`${API_URL}/api/auth/me`, {
+      const response = await fetch("/api/auth/me", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -70,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

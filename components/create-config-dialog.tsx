@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import {
   Dialog,
@@ -18,8 +19,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Trash2, Globe, Zap } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 interface ProxyLocation {
   path: string
@@ -92,13 +91,9 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
         locations: locations.filter((loc) => loc.path && loc.backend),
       }
 
-      const token = localStorage.getItem("auth_token")
-      const response = await fetch(`${API_URL}/api/configs`, {
+      const response = await fetch("/api/configs", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),
       })
 

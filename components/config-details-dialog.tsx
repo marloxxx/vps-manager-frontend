@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Server, Globe, Shield, Zap, Clock } from "lucide-react"
+import { Server, Globe, Shield, Zap, Clock, Settings } from "lucide-react"
 
 interface ConfigDetailsDialogProps {
   config: any
@@ -158,6 +158,50 @@ export function ConfigDetailsDialog({ config, open, onOpenChange }: ConfigDetail
               </div>
             </CardContent>
           </Card>
+
+          {/* Advanced Settings */}
+          {(config.rate_limit_global || config.upstream) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Advanced Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {config.rate_limit_global && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Global Rate Limit</label>
+                    <p className="font-mono text-sm bg-gray-100 p-2 rounded">{config.rate_limit_global}</p>
+                  </div>
+                )}
+
+                {config.upstream && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Load Balancer</label>
+                    <div className="mt-2 space-y-2">
+                      <p className="font-mono text-sm bg-gray-100 p-2 rounded">
+                        <strong>Name:</strong> {config.upstream.name}
+                      </p>
+                      <p className="font-mono text-sm bg-gray-100 p-2 rounded">
+                        <strong>Method:</strong> {config.upstream.method}
+                      </p>
+                      <div>
+                        <strong className="text-sm">Servers:</strong>
+                        <div className="mt-1 space-y-1">
+                          {config.upstream.servers.map((server: string, idx: number) => (
+                            <p key={idx} className="font-mono text-sm bg-gray-100 p-2 rounded ml-4">
+                              {server}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </DialogContent>
     </Dialog>

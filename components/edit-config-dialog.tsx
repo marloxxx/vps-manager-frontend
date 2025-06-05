@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { useState, useEffect } from "react"
 import {
   Dialog,
@@ -17,8 +18,6 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Trash2, Save } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 interface EditConfigDialogProps {
   config: any
@@ -42,13 +41,9 @@ export function EditConfigDialog({ config, open, onOpenChange, onConfigUpdated }
     setLoading(true)
 
     try {
-      const token = localStorage.getItem("auth_token")
-      const response = await fetch(`${API_URL}/api/configs/${config.id}`, {
+      const response = await fetch(`/api/configs/${config.id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       })
 
@@ -92,7 +87,7 @@ export function EditConfigDialog({ config, open, onOpenChange, onConfigUpdated }
 
   const removeLocation = (index: number) => {
     if (formData.locations.length > 1) {
-      const newLocations = formData.locations.filter((_: any, i: number) => i !== index)
+      const newLocations = formData.locations.filter((_, i) => i !== index)
       setFormData({ ...formData, locations: newLocations })
     }
   }

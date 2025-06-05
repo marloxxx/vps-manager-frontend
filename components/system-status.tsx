@@ -1,14 +1,12 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { RefreshCw, Server, HardDrive, Cpu, MemoryStick, Network } from "lucide-react"
+import { RefreshCw, Server, HardDrive, Cpu, MemoryStick, Network, AlertTriangle } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 interface SystemStatusProps {
   systemStats: any
@@ -16,17 +14,14 @@ interface SystemStatusProps {
 
 export function SystemStatus({ systemStats }: SystemStatusProps) {
   const [loading, setLoading] = useState(false)
+  const [nginxLogs, setNginxLogs] = useState<string[]>([])
 
   const refreshStatus = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem("auth_token")
-      const response = await fetch(`${API_URL}/api/system/status`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const response = await fetch("/api/system/status")
       if (response.ok) {
+        const data = await response.json()
         toast({
           title: "Status Updated",
           description: "System status refreshed successfully",
@@ -45,13 +40,7 @@ export function SystemStatus({ systemStats }: SystemStatusProps) {
 
   const restartNginx = async () => {
     try {
-      const token = localStorage.getItem("auth_token")
-      const response = await fetch(`${API_URL}/api/system/nginx/restart`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const response = await fetch("/api/system/nginx/restart", { method: "POST" })
       if (response.ok) {
         toast({
           title: "Success",
@@ -69,13 +58,7 @@ export function SystemStatus({ systemStats }: SystemStatusProps) {
 
   const reloadNginx = async () => {
     try {
-      const token = localStorage.getItem("auth_token")
-      const response = await fetch(`${API_URL}/api/system/nginx/reload`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const response = await fetch("/api/system/nginx/reload", { method: "POST" })
       if (response.ok) {
         toast({
           title: "Success",
@@ -90,6 +73,22 @@ export function SystemStatus({ systemStats }: SystemStatusProps) {
       })
     }
   }
+
+  useEffect(() => {
+    const fetchNginxLogs = async () => {
+      try {
+        const response = await fetch("/api/system/nginx/logs")
+        if (response.ok) {
+          const data = await response.json()
+          setNginxLogs(data.logs || [])
+        }
+      } catch (error) {
+        console.error("Failed to fetch Nginx logs:", error)
+      }
+    }
+
+    fetchNginxLogs()
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -191,6 +190,61 @@ export function SystemStatus({ systemStats }: SystemStatusProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Recent Nginx Logs */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5" />
+            Recent Nginx Logs
+          </CardTitle>
+          <CardDescription>Last 10 entries from Nginx error log</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto">
+            {nginxLogs.length > 0 ? (
+              nginxLogs.map((log, index) => (
+                <div key={index} className="mb-1">
+                  {log}
+                </div>
+              ))
+            ) : (
+              <div className="text-gray-400">No recent logs available</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Configuration Test */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Configuration Test</CardTitle>
+          <CardDescription>Test Nginx configuration syntax</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            onClick={async () => {
+              try {
+                const response = await fetch("/api/system/nginx/test", { method: "POST" })
+                const result = await response.json()
+                toast({
+                  title: result.success ? "Configuration Valid" : "Configuration Error",
+                  description: result.message,
+                  variant: result.success ? "default" : "destructive",
+                })
+              } catch (error) {
+                toast({
+                  title: "Error",
+                  description: "Failed to test configuration",
+                  variant: "destructive",
+                })
+              }
+            }}
+          >
+            Test Configuration
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }
