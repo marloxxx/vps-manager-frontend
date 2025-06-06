@@ -126,13 +126,6 @@ export default function LoginPage() {
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Default credentials: <br />
-                <span className="font-mono bg-gray-100 px-2 py-1 rounded">admin / admin123</span>
-              </p>
-            </div>
           </CardContent>
         </Card>
 
@@ -142,7 +135,7 @@ export default function LoginPage() {
             <Globe className="h-4 w-4" />
             Powered by Surveyor Indonesia
           </p>
-          <p className="mt-1">© 2024 All rights reserved</p>
+          <p className="mt-1">© 2025 All rights reserved</p>
         </div>
       </div>
     </div>
