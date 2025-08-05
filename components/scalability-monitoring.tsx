@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Database, 
-  Network, 
-  Server, 
-  Activity, 
+import {
+  Database,
+  Network,
+  Server,
+  Activity,
   TrendingUp,
   CheckCircle,
   XCircle,
@@ -19,10 +19,10 @@ import {
   RefreshCw,
   BarChart3,
   Cpu,
-  Memory,
+  MemoryStick,
   HardDrive
 } from 'lucide-react'
-import { 
+import {
   getCacheStats,
   clearCache,
   getConnectionPoolStats,
@@ -95,13 +95,13 @@ export default function ScalabilityMonitoring() {
   const [taskQueueStatus, setTaskQueueStatus] = useState<TaskQueueStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  
+
   const { toast } = useToast()
 
   const loadData = async () => {
     try {
       setRefreshing(true)
-      
+
       // Load all scalability data
       const [
         cacheData,
@@ -125,7 +125,7 @@ export default function ScalabilityMonitoring() {
       setClusterLoad(clusterLoadData)
       setBackendHealth(backendHealthData)
       setTaskQueueStatus(taskQueueData)
-      
+
     } catch (error) {
       console.error('Failed to load scalability data:', error)
       toast({
@@ -141,7 +141,7 @@ export default function ScalabilityMonitoring() {
 
   useEffect(() => {
     loadData()
-    
+
     // Refresh data every 30 seconds
     const interval = setInterval(loadData, 30000)
     return () => clearInterval(interval)
@@ -341,8 +341,8 @@ export default function ScalabilityMonitoring() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Utilization</span>
-                <Badge variant={getConnectionStatus() === 'critical' ? 'destructive' : 
-                               getConnectionStatus() === 'warning' ? 'secondary' : 'default'}>
+                <Badge variant={getConnectionStatus() === 'critical' ? 'destructive' :
+                  getConnectionStatus() === 'warning' ? 'secondary' : 'default'}>
                   {getConnectionStatus()}
                 </Badge>
               </div>
@@ -470,7 +470,7 @@ export default function ScalabilityMonitoring() {
                       </Badge>
                     </div>
                   </div>
-                  
+
                   {Object.entries(backendHealth.backends).map(([backend, health]) => (
                     <div key={backend} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center space-x-3">
@@ -538,7 +538,7 @@ export default function ScalabilityMonitoring() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Active Threads</span>
-                      <Memory className="h-4 w-4 text-muted-foreground" />
+                      <MemoryStick className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div className="text-2xl font-bold">
                       {taskQueueStatus.active_threads}
