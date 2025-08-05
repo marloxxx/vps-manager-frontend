@@ -1,0 +1,29 @@
+[Unit]
+Description=VPS Manager Frontend (PM2)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=forking
+User=root
+Group=root
+WorkingDirectory=/opt/vps-manager-frontend
+Environment=PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=NEXT_PUBLIC_API_URL=http://localhost:8000
+Environment=NEXT_PUBLIC_APP_NAME=VPS Manager
+Environment=NEXT_PUBLIC_APP_VERSION=2.0.0
+
+ExecStart=/usr/local/bin/pm2 start ecosystem.config.js --env production
+ExecReload=/usr/local/bin/pm2 reload vps-manager-frontend
+ExecStop=/usr/local/bin/pm2 stop vps-manager-frontend
+ExecStopPost=/usr/local/bin/pm2 delete vps-manager-frontend
+
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target 
