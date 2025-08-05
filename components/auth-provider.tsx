@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       apiClient.setToken(token)
-      const userData = await apiClient.getCurrentUser()
+      const userData = await apiClient.getCurrentUser() as User
       setUser(userData)
     } catch (error) {
       console.error("Auth check failed:", error)
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      const data = await apiClient.login(username, password)
+      const data = await apiClient.login(username, password) as { token: string; user: User }
       apiClient.setToken(data.token)
       setUser(data.user)
       router.push("/")

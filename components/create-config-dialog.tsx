@@ -17,7 +17,9 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Trash2, Globe, Zap } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Plus, Trash2, Globe, Zap, ArrowRight, Upload, FileText } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { apiClient } from "@/lib/api"
 
@@ -36,6 +38,7 @@ interface CreateConfigDialogProps {
 }
 
 export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: CreateConfigDialogProps) {
+  const [isPortForwarding, setIsPortForwarding] = useState(false)
   const [formData, setFormData] = useState({
     id: "",
     server_name: "",
@@ -44,6 +47,11 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
     ssl_key: "",
     is_active: true,
   })
+
+  const [sslCertContent, setSslCertContent] = useState("")
+  const [sslKeyContent, setSslKeyContent] = useState("")
+  const [sslCertFile, setSslCertFile] = useState<File | null>(null)
+  const [sslKeyFile, setSslKeyFile] = useState<File | null>(null)
 
   const [locations, setLocations] = useState<ProxyLocation[]>([
     {
@@ -82,17 +90,41 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
     setLocations(updated)
   }
 
+  const handleSslCertFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSslCertFile(file)
+      setSslCertContent("")
+      setFormData({ ...formData, ssl_cert: file.name })
+    }
+  }
+
+  const handleSslKeyFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSslKeyFile(file)
+      setSslKeyContent("")
+      setFormData({ ...formData, ssl_key: file.name })
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      const config = {
+      // Prepare form data for backend
+      const configData = {
         ...formData,
         locations: locations.filter((loc) => loc.path && loc.backend),
+        ssl_cert_content: sslCertContent || undefined,
+        ssl_key_content: sslKeyContent || undefined,
+        // Remove file paths if we have content
+        ssl_cert: sslCertContent ? undefined : formData.ssl_cert,
+        ssl_key: sslKeyContent ? undefined : formData.ssl_key,
       }
 
-      await apiClient.createConfig(config)
+      await apiClient.createConfig(configData)
       toast({
         title: "Success",
         description: "Configuration created successfully",
@@ -120,6 +152,10 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
       ssl_key: "",
       is_active: true,
     })
+    setSslCertContent("")
+    setSslKeyContent("")
+    setSslCertFile(null)
+    setSslKeyFile(null)
     setLocations([
       {
         path: "/",
@@ -129,15 +165,21 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
         custom_headers: {},
       },
     ])
+    setIsPortForwarding(false)
   }
 
   const generateId = () => {
-    const id = formData.server_name
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "")
-    setFormData({ ...formData, id })
+    if (isPortForwarding) {
+      const id = `port-forward-${formData.listen_port}`
+      setFormData({ ...formData, id })
+    } else {
+      const id = formData.server_name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
+      setFormData({ ...formData, id })
+    }
   }
 
   // Rest of the component remains the same...
@@ -146,10 +188,44 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Configuration</DialogTitle>
-          <DialogDescription>Set up a new reverse proxy configuration for your domain.</DialogDescription>
+          <DialogDescription>Set up a new reverse proxy configuration for your domain or port forwarding.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Configuration Type Toggle */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                Configuration Type
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={!isPortForwarding}
+                    onCheckedChange={(checked) => setIsPortForwarding(!checked)}
+                  />
+                  <Label>Domain/Server Name</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={isPortForwarding}
+                    onCheckedChange={(checked) => setIsPortForwarding(checked)}
+                  />
+                  <Label>Port Forwarding</Label>
+                </div>
+              </div>
+              <div className="mt-2 text-sm text-muted-foreground">
+                {isPortForwarding
+                  ? "Simple port forwarding without domain name"
+                  : "Reverse proxy with domain name configuration"
+                }
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Basic Configuration */}
           <Card>
             <CardHeader>
@@ -160,24 +236,37 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="server_name">Server Name (Domain)</Label>
-                  <Input
-                    id="server_name"
-                    value={formData.server_name}
-                    onChange={(e) => setFormData({ ...formData, server_name: e.target.value })}
-                    placeholder="example.com"
-                    required
-                    onBlur={generateId}
-                  />
-                </div>
+                {!isPortForwarding ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="server_name">Server Name (Domain)</Label>
+                    <Input
+                      id="server_name"
+                      value={formData.server_name}
+                      onChange={(e) => setFormData({ ...formData, server_name: e.target.value })}
+                      placeholder="example.com"
+                      required
+                      onBlur={generateId}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="server_name">Port Forwarding Name</Label>
+                    <Input
+                      id="server_name"
+                      value={formData.server_name}
+                      onChange={(e) => setFormData({ ...formData, server_name: e.target.value })}
+                      placeholder="my-app or leave empty for auto"
+                      onBlur={generateId}
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="id">Configuration ID</Label>
                   <Input
                     id="id"
                     value={formData.id}
                     onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-                    placeholder="example-com"
+                    placeholder={isPortForwarding ? "port-forward-80" : "example-com"}
                     required
                   />
                 </div>
@@ -190,7 +279,13 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
                     id="listen_port"
                     type="number"
                     value={formData.listen_port}
-                    onChange={(e) => setFormData({ ...formData, listen_port: Number.parseInt(e.target.value) })}
+                    onChange={(e) => {
+                      const port = Number.parseInt(e.target.value)
+                      setFormData({ ...formData, listen_port: port })
+                      if (isPortForwarding) {
+                        generateId()
+                      }
+                    }}
                     min="1"
                     max="65535"
                     required
@@ -206,35 +301,97 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
                 </div>
               </div>
 
-              {/* SSL Configuration */}
-              <div className="space-y-4 pt-4 border-t">
-                <h4 className="font-medium">SSL Configuration (Optional)</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="ssl_cert">SSL Certificate Path</Label>
-                    <Input
-                      id="ssl_cert"
-                      value={formData.ssl_cert}
-                      onChange={(e) => setFormData({ ...formData, ssl_cert: e.target.value })}
-                      placeholder="/path/to/cert.pem"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="ssl_key">SSL Private Key Path</Label>
-                    <Input
-                      id="ssl_key"
-                      value={formData.ssl_key}
-                      onChange={(e) => setFormData({ ...formData, ssl_key: e.target.value })}
-                      placeholder="/path/to/private.key"
-                    />
-                  </div>
+              {/* SSL Configuration - Only show for domain mode */}
+              {!isPortForwarding && (
+                <div className="space-y-4 pt-4 border-t">
+                  <h4 className="font-medium">SSL Configuration (Optional)</h4>
+
+                  <Tabs defaultValue="file" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="file">File Upload</TabsTrigger>
+                      <TabsTrigger value="text">Certificate Content</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="file" className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="ssl_cert_file">SSL Certificate File</Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              id="ssl_cert_file"
+                              type="file"
+                              accept=".pem,.crt,.cert"
+                              onChange={handleSslCertFileChange}
+                              className="flex-1"
+                            />
+                            <Upload className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          {sslCertFile && (
+                            <p className="text-sm text-green-600">✓ {sslCertFile.name}</p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="ssl_key_file">SSL Private Key File</Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              id="ssl_key_file"
+                              type="file"
+                              accept=".key,.pem"
+                              onChange={handleSslKeyFileChange}
+                              className="flex-1"
+                            />
+                            <Upload className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          {sslKeyFile && (
+                            <p className="text-sm text-green-600">✓ {sslKeyFile.name}</p>
+                          )}
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="text" className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="ssl_cert_content">SSL Certificate Content</Label>
+                          <Textarea
+                            id="ssl_cert_content"
+                            value={sslCertContent}
+                            onChange={(e) => setSslCertContent(e.target.value)}
+                            placeholder="-----BEGIN CERTIFICATE-----&#10;Your certificate content here...&#10;-----END CERTIFICATE-----"
+                            rows={8}
+                            className="font-mono text-sm"
+                          />
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <FileText className="h-4 w-4" />
+                            <span>Paste your certificate content here</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="ssl_key_content">SSL Private Key Content</Label>
+                          <Textarea
+                            id="ssl_key_content"
+                            value={sslKeyContent}
+                            onChange={(e) => setSslKeyContent(e.target.value)}
+                            placeholder="-----BEGIN PRIVATE KEY-----&#10;Your private key content here...&#10;-----END PRIVATE KEY-----"
+                            rows={8}
+                            className="font-mono text-sm"
+                          />
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <FileText className="h-4 w-4" />
+                            <span>Paste your private key content here</span>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+
+                  {formData.server_name.endsWith(".ptsi.co.id") && !formData.ssl_cert && !sslCertContent && (
+                    <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded">
+                      <strong>Auto SSL:</strong> Wildcard certificate for *.ptsi.co.id will be used automatically.
+                    </div>
+                  )}
                 </div>
-                {formData.server_name.endsWith(".ptsi.co.id") && !formData.ssl_cert && (
-                  <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded">
-                    <strong>Auto SSL:</strong> Wildcard certificate for *.ptsi.co.id will be used automatically.
-                  </div>
-                )}
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -244,11 +401,11 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Zap className="h-5 w-5" />
-                  Proxy Locations
+                  {isPortForwarding ? "Forward Rules" : "Proxy Locations"}
                 </CardTitle>
                 <Button type="button" onClick={addLocation} size="sm" variant="outline">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Location
+                  Add {isPortForwarding ? "Rule" : "Location"}
                 </Button>
               </div>
             </CardHeader>
@@ -256,7 +413,9 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
               {locations.map((location, index) => (
                 <div key={index} className="border rounded-lg p-4 space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium">Location {index + 1}</h4>
+                    <h4 className="font-medium">
+                      {isPortForwarding ? `Forward Rule ${index + 1}` : `Location ${index + 1}`}
+                    </h4>
                     {locations.length > 1 && (
                       <Button
                         type="button"
@@ -285,33 +444,42 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
                       <Input
                         value={location.backend}
                         onChange={(e) => updateLocation(index, "backend", e.target.value)}
-                        placeholder="127.0.0.1:3000 or https://backend.com"
+                        placeholder={isPortForwarding ? "127.0.0.1:3000" : "127.0.0.1:3000 or https://backend.com"}
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={location.websocket}
-                        onCheckedChange={(checked) => updateLocation(index, "websocket", checked)}
-                      />
-                      <Label>WebSocket Support</Label>
+                  {!isPortForwarding && (
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={location.websocket}
+                          onCheckedChange={(checked) => updateLocation(index, "websocket", checked)}
+                        />
+                        <Label>WebSocket Support</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={location.ssl_verify}
+                          onCheckedChange={(checked) => updateLocation(index, "ssl_verify", checked)}
+                        />
+                        <Label>SSL Verification</Label>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        checked={location.ssl_verify}
-                        onCheckedChange={(checked) => updateLocation(index, "ssl_verify", checked)}
-                      />
-                      <Label>SSL Verification</Label>
-                    </div>
-                  </div>
+                  )}
 
-                  {location.websocket && (
+                  {!isPortForwarding && location.websocket && (
                     <Badge variant="secondary" className="w-fit">
                       WebSocket enabled - HTTP/1.1 will be used
                     </Badge>
+                  )}
+
+                  {isPortForwarding && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <ArrowRight className="h-4 w-4" />
+                      <span>Port {formData.listen_port} → {location.backend}</span>
+                    </div>
                   )}
                 </div>
               ))}
@@ -323,7 +491,7 @@ export function CreateConfigDialog({ open, onOpenChange, onConfigCreated }: Crea
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create Configuration"}
+              {loading ? "Creating..." : `Create ${isPortForwarding ? "Port Forward" : "Configuration"}`}
             </Button>
           </DialogFooter>
         </form>

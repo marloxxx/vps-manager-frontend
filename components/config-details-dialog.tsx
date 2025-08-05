@@ -20,9 +20,11 @@ export function ConfigDetailsDialog({ config, open, onOpenChange }: ConfigDetail
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Globe className="h-5 w-5" />
-            {config.server_name}
+            {config.server_name || `Port Forward ${config.listen_port}`}
           </DialogTitle>
-          <DialogDescription>Configuration details and settings</DialogDescription>
+          <DialogDescription>
+            {config.server_name ? "Configuration details and settings" : "Port forwarding configuration details"}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -41,8 +43,12 @@ export function ConfigDetailsDialog({ config, open, onOpenChange }: ConfigDetail
                   <p className="font-mono text-sm bg-gray-100 p-2 rounded">{config.id}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Server Name</label>
-                  <p className="font-mono text-sm bg-gray-100 p-2 rounded">{config.server_name}</p>
+                  <label className="text-sm font-medium text-gray-600">
+                    {config.server_name ? "Server Name" : "Port Forwarding Name"}
+                  </label>
+                  <p className="font-mono text-sm bg-gray-100 p-2 rounded">
+                    {config.server_name || "Not specified"}
+                  </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">Listen Port</label>
@@ -60,8 +66,8 @@ export function ConfigDetailsDialog({ config, open, onOpenChange }: ConfigDetail
             </CardContent>
           </Card>
 
-          {/* SSL Configuration */}
-          {(config.ssl_cert || config.server_name.endsWith(".ptsi.co.id")) && (
+          {/* SSL Configuration - Only show for domain configurations */}
+          {config.server_name && (config.ssl_cert || config.server_name.endsWith(".ptsi.co.id")) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -95,17 +101,22 @@ export function ConfigDetailsDialog({ config, open, onOpenChange }: ConfigDetail
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Zap className="h-5 w-5" />
-                Proxy Locations ({config.locations?.length || 0})
+                {config.server_name ? "Proxy Locations" : "Forward Rules"} ({config.locations?.length || 0})
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {config.locations?.map((location: any, index: number) => (
                 <div key={index} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium">Location {index + 1}</h4>
+                    <h4 className="font-medium">
+                      {config.server_name ? `Location ${index + 1}` : `Forward Rule ${index + 1}`}
+                    </h4>
                     <div className="flex gap-2">
-                      {location.websocket && <Badge variant="outline">WebSocket</Badge>}
-                      {!location.ssl_verify && <Badge variant="destructive">No SSL Verify</Badge>}
+                      {config.server_name && location.websocket && <Badge variant="outline">WebSocket</Badge>}
+                      {config.server_name && !location.ssl_verify && <Badge variant="destructive">No SSL Verify</Badge>}
+                      {!config.server_name && (
+                        <Badge variant="secondary">Port Forward</Badge>
+                      )}
                     </div>
                   </div>
 

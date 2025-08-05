@@ -1,487 +1,559 @@
 # VPS Manager Frontend
 
-A modern, responsive web interface for the VPS Manager system built with Next.js 14, TypeScript, and Tailwind CSS. This frontend provides an intuitive dashboard for managing reverse proxy configurations, monitoring system health, and administering Nginx servers.
+**Surveyor Indonesia - VPS Manager v2.0.0**
 
-## 🚀 Features
+A modern, responsive web interface for comprehensive VPS management with advanced monitoring, logging, and scalability features.
 
-### Core Functionality
-- **🔐 Authentication**: JWT-based secure login with role-based access control
-- **📊 Dashboard**: Real-time system monitoring and configuration overview
-- **⚙️ Configuration Management**: Create, edit, delete, and manage reverse proxy configurations
-- **📋 Templates**: Pre-built configuration templates for common use cases
-- **⚖️ Load Balancer**: Manage upstream servers and load balancing strategies
-- **🔒 SSL Management**: Certificate management and SSL configuration
-- **📈 System Monitoring**: Real-time system stats, resource usage, and health checks
-- **📝 Log Viewer**: Browse and download Nginx access and error logs
-- **💾 Backup & Restore**: Configuration backup and restore functionality
+## 🚀 **Features Overview**
 
-### User Experience
-- **📱 Responsive Design**: Works seamlessly on desktop, tablet, and mobile
-- **🎨 Modern UI**: Clean, intuitive interface built with shadcn/ui components
-- **🌙 Theme Support**: Light and dark mode support
-- **⚡ Real-time Updates**: Live system statistics and status updates
-- **🔔 Notifications**: Toast notifications for user actions and system events
+### **Core Features**
+- **Configuration Management** - Create, edit, and manage Nginx configurations
+- **SSL Certificate Management** - Let's Encrypt integration and custom certificate uploads
+- **Load Balancing** - Advanced load balancer with health checks
+- **Backup & Restore** - Automated backup system with retention policies
+- **System Monitoring** - Real-time system metrics and health monitoring
 
-## 📋 Prerequisites
+### **Advanced Features**
+- **Real-time Monitoring Dashboard** - WebSocket-based live metrics and alerts
+- **Advanced Logging System** - Structured logging with audit trails and compliance
+- **Scalability Monitoring** - Redis caching, connection pooling, and horizontal scaling
+- **Performance Analytics** - Detailed performance metrics and optimization tools
 
-Before running the frontend, ensure you have:
+## 📋 **Table of Contents**
 
-- **Node.js** 18.0 or higher
-- **npm** or **yarn** package manager
-- **VPS Manager Backend** running and accessible
-- Modern web browser with JavaScript enabled
+1. [Installation](#installation)
+2. [Configuration](#configuration)
+3. [Components](#components)
+4. [Real-time Monitoring](#real-time-monitoring)
+5. [Advanced Logging](#advanced-logging)
+6. [Scalability Features](#scalability-features)
+7. [User Interface](#user-interface)
+8. [Deployment](#deployment)
 
-## 🛠️ Installation
+## 🛠️ **Installation**
 
-### 1. Clone and Setup
+### **Prerequisites**
+```bash
+# Node.js 18+ and npm/pnpm
+node --version
+npm --version
 
-\`\`\`bash
-# Clone the repository
+# Install pnpm (recommended)
+npm install -g pnpm
+```
+
+### **Frontend Setup**
+```bash
+# Clone repository
 git clone <repository-url>
 cd vps-manager-frontend
 
 # Install dependencies
-npm install
-# or
-yarn install
-\`\`\`
+pnpm install
 
-### 2. Environment Configuration
-
-Create environment configuration file:
-
-\`\`\`bash
-cp .env.local.example .env.local
-\`\`\`
-
-Edit `.env.local` with your backend configuration:
-
-\`\`\`env
-# Backend API URL - Update this to point to your backend server
-NEXT_PUBLIC_API_URL=http://localhost:8000
-
-# Application Settings (Optional)
-NEXT_PUBLIC_APP_NAME="VPS Manager"
-NEXT_PUBLIC_COMPANY_NAME="Surveyor Indonesia"
-\`\`\`
-
-### 3. Development Server
-
-\`\`\`bash
 # Start development server
-npm run dev
-# or
-yarn dev
-\`\`\`
+pnpm dev
 
-The application will be available at `http://localhost:3000`
-
-### 4. Production Build
-
-\`\`\`bash
 # Build for production
-npm run build
+pnpm build
+```
 
-# Start production server
-npm start
-\`\`\`
+### **Environment Variables**
+```bash
+# .env.local
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_APP_NAME=VPS Manager
+NEXT_PUBLIC_VERSION=2.0.0
+```
 
-## 🔑 Default Login Credentials
+## ⚙️ **Configuration**
 
-The system comes with pre-configured users:
+### **API Configuration**
+```typescript
+// lib/api.ts
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-| Username | Password | Role | Description |
-|----------|----------|------|-------------|
-| `admin` | `admin123` | Admin | Full system access |
-| `user` | `user123` | User | Limited access |
-| `operator` | `operator123` | User | Operations access |
-| `manager` | `manager123` | Admin | Management access |
+export const apiClient = new ApiClient({
+  baseURL: API_BASE_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+```
 
-> ⚠️ **Security Note**: Change default passwords in production environments!
+### **Authentication**
+```typescript
+// components/auth-provider.tsx
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
-## 📖 Usage Guide
+  // JWT token management
+  const login = async (credentials: LoginCredentials) => {
+    const response = await apiClient.login(credentials)
+    localStorage.setItem('token', response.access_token)
+    setUser(response.user)
+  }
 
-### Getting Started
+  const logout = () => {
+    localStorage.removeItem('token')
+    setUser(null)
+  }
+}
+```
 
-1. **Login**: Use the credentials above to access the system
-2. **Dashboard**: View system overview and statistics
-3. **Create Configuration**: Click "New Configuration" to set up reverse proxy
-4. **Monitor System**: Check system health and view logs
-5. **Manage SSL**: Configure SSL certificates for secure connections
+## 🧩 **Components**
 
-### Creating Reverse Proxy Configurations
+### **Core Components**
 
-1. Navigate to the **Configurations** tab
-2. Click **"New Configuration"** button
-3. Fill in the configuration details:
-   - **Server Name**: Domain name (e.g., `example.com`)
-   - **Listen Port**: Port number (80 for HTTP, 443 for HTTPS)
-   - **Locations**: Define proxy paths and backend servers
-   - **SSL Settings**: Configure SSL certificates if needed
-4. **Save and Activate** the configuration
+#### **Configuration Management**
+- `ConfigList` - Display and manage Nginx configurations
+- `CreateConfigDialog` - Create new configurations
+- `EditConfigDialog` - Edit existing configurations
+- `ConfigTemplates` - Pre-defined configuration templates
 
-### Using Configuration Templates
+#### **System Management**
+- `SystemStatus` - Real-time system health monitoring
+- `BackupRestore` - Backup and restore functionality
+- `SSLManager` - SSL certificate management
+- `LoadBalancer` - Load balancer configuration
 
-1. Go to the **Templates** tab
-2. Browse available templates:
-   - **Web Application**: Standard web app with static files
-   - **API Gateway**: Microservices API gateway
-   - **WebSocket App**: Real-time applications
-   - **Load Balanced App**: Multi-server applications
-3. Select a template and customize as needed
-4. Deploy the configuration
+#### **Logging & Monitoring**
+- `LogViewer` - Basic log viewing
+- `RealTimeMonitoring` - Advanced real-time monitoring
+- `AdvancedLogging` - Structured logging with filtering
+- `ScalabilityMonitoring` - Performance and scalability metrics
 
-### Managing Load Balancers
+### **UI Components**
+- Modern, responsive design with Tailwind CSS
+- Dark/light theme support
+- Mobile-optimized interface
+- Real-time updates with WebSocket connections
 
-1. Navigate to **Load Balancer** tab
-2. Click **"Create Pool"** to set up upstream servers
-3. Configure load balancing method:
-   - **Round Robin**: Even distribution
-   - **Least Connections**: Route to least busy server
-   - **IP Hash**: Consistent routing based on client IP
-4. Add backend servers with health checks
-5. Apply to configurations
+## 📊 **Real-time Monitoring**
 
-### SSL Certificate Management
+### **Features**
+- **Live Metrics Dashboard** - CPU, memory, disk, network usage
+- **WebSocket Connection** - Real-time data streaming
+- **Alert Management** - Threshold-based alerts and notifications
+- **Historical Data** - Metrics history with customizable time ranges
+- **Performance Trends** - Visual trend analysis
 
-1. Access **SSL Manager** tab
-2. View existing certificates and expiration dates
-3. Add custom certificates or use Let's Encrypt
-4. Monitor certificate health and renewal status
+### **Metrics Displayed**
+```typescript
+interface SystemMetrics {
+  timestamp: string
+  cpu_usage: number
+  memory_usage: number
+  disk_usage: number
+  network_in: number
+  network_out: number
+  nginx_connections: number
+  nginx_requests_per_second: number
+}
+```
 
-### System Monitoring
+### **Alert System**
+```typescript
+interface Alert {
+  id: string
+  rule_id: string
+  timestamp: string
+  metric: string
+  value: number
+  threshold: number
+  status: string
+  message: string
+}
+```
 
-1. **System Status**: View Nginx status, uptime, and resource usage
-2. **Log Viewer**: Browse recent Nginx access and error logs
-3. **Real-time Stats**: Monitor CPU, memory, and disk usage
-4. **Health Checks**: Verify system components are running
+### **Usage Example**
+```tsx
+import RealTimeMonitoring from '@/components/real-time-monitoring'
 
-### Backup and Restore
+export default function MonitoringPage() {
+  return (
+    <div className="container mx-auto p-6">
+      <RealTimeMonitoring />
+    </div>
+  )
+}
+```
 
-1. Go to **Backup** tab
-2. **Create Backup**: Generate configuration snapshots
-3. **Download Backups**: Save backups locally
-4. **Restore**: Upload and restore previous configurations
+## 📝 **Advanced Logging**
 
-## 🏗️ Project Structure
+### **Features**
+- **Structured Logs** - JSON-formatted application logs
+- **Audit Logs** - User actions and compliance tracking
+- **Performance Logs** - Request timing and performance metrics
+- **Security Logs** - Security events and threat detection
+- **Log Filtering** - Advanced filtering by level, source, time range
+- **Log Retention** - Configurable retention policies
 
-\`\`\`
-vps-manager-frontend/
-├── app/                      # Next.js 14 App Router
-│   ├── layout.tsx           # Root layout with providers
-│   ├── page.tsx             # Main dashboard page
-│   ├── login/               # Authentication pages
-│   └── globals.css          # Global styles and CSS variables
-├── components/              # React components
-│   ├── ui/                  # shadcn/ui base components
-│   │   ├── button.tsx       # Button component
-│   │   ├── card.tsx         # Card component
-│   │   ├── dialog.tsx       # Modal dialogs
-│   │   └── ...              # Other UI components
-│   ├── auth-provider.tsx    # Authentication context
-│   ├── navbar.tsx           # Navigation bar
-│   ├── config-list.tsx      # Configuration management
-│   ├── system-status.tsx    # System monitoring
-│   ├── log-viewer.tsx       # Log viewing interface
-│   └── ...                  # Feature-specific components
-├── hooks/                   # Custom React hooks
-│   ├── use-toast.ts         # Toast notification hook
-│   └── use-mobile.tsx       # Mobile detection hook
-├── lib/                     # Utility functions
-│   └── utils.ts             # Common utilities
-├── public/                  # Static assets
-│   └── images/              # Images and icons
-├── .env.local               # Environment variables
-├── next.config.js           # Next.js configuration
-├── tailwind.config.js       # Tailwind CSS configuration
-├── tsconfig.json            # TypeScript configuration
-└── package.json             # Dependencies and scripts
-\`\`\`
+### **Log Types**
+```typescript
+interface LogEntry {
+  timestamp: string
+  level: string
+  message: string
+  source: string
+  user_id?: string
+  action?: string
+  resource?: string
+  ip_address?: string
+  user_agent?: string
+  duration_ms?: number
+  status_code?: number
+  request_id?: string
+}
+```
 
-## 🔧 Configuration
+### **Filtering Options**
+```typescript
+interface LogFilter {
+  level?: string
+  source?: string
+  start_time?: string
+  end_time?: string
+  user_id?: string
+  action?: string
+  limit: number
+}
+```
 
-### Environment Variables
+### **Usage Example**
+```tsx
+import AdvancedLogging from '@/components/advanced-logging'
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `NEXT_PUBLIC_API_URL` | Backend API endpoint | `http://localhost:8000` | Yes |
-| `NEXT_PUBLIC_APP_NAME` | Application name | `VPS Manager` | No |
-| `NEXT_PUBLIC_COMPANY_NAME` | Company name | `Surveyor Indonesia` | No |
+export default function LoggingPage() {
+  return (
+    <div className="container mx-auto p-6">
+      <AdvancedLogging />
+    </div>
+  )
+}
+```
 
-### API Integration
+## 🔧 **Scalability Features**
 
-The frontend communicates with the VPS Manager Backend through RESTful APIs:
+### **Cache Performance**
+- **Redis Integration** - Distributed caching support
+- **Memory Cache** - In-memory cache fallback
+- **Cache Statistics** - Hit rates and performance metrics
+- **Cache Management** - Clear cache and monitor usage
 
-- **Authentication**: JWT token-based authentication
-- **Real-time Updates**: Polling for system statistics
-- **File Operations**: Configuration and log file management
-- **System Control**: Nginx service management
+### **Connection Pooling**
+- **Database Connections** - Connection pool monitoring
+- **Utilization Metrics** - Connection usage statistics
+- **Health Checks** - Connection pool health monitoring
 
-### Styling and Theming
+### **Cluster Management**
+- **Node Registration** - Register cluster nodes
+- **Load Distribution** - Monitor load across nodes
+- **Health Monitoring** - Backend service health checks
+- **Task Queue** - Background task processing
 
-- **Tailwind CSS**: Utility-first CSS framework
-- **shadcn/ui**: High-quality component library
-- **CSS Variables**: Theme customization support
-- **Responsive Design**: Mobile-first approach
-- **Dark Mode**: System preference detection
+### **Performance Monitoring**
+```typescript
+interface CacheStats {
+  redis: {
+    connected: boolean
+    memory_usage?: any
+    keys?: number
+  }
+  memory_cache: {
+    config_cache_size: number
+    metrics_cache_size: number
+  }
+}
 
-## 🚀 Deployment
+interface ConnectionPoolStats {
+  available_connections: number
+  in_use_connections: number
+  max_connections: number
+}
+```
 
-### Vercel (Recommended)
+### **Usage Example**
+```tsx
+import ScalabilityMonitoring from '@/components/scalability-monitoring'
 
-1. **Connect Repository**: Link your GitHub repository to Vercel
-2. **Environment Variables**: Set `NEXT_PUBLIC_API_URL` in Vercel dashboard
-3. **Deploy**: Automatic deployment on git push
-4. **Custom Domain**: Configure your domain in Vercel settings
+export default function ScalabilityPage() {
+  return (
+    <div className="container mx-auto p-6">
+      <ScalabilityMonitoring />
+    </div>
+  )
+}
+```
 
-\`\`\`bash
-# Install Vercel CLI
-npm i -g vercel
+## 🎨 **User Interface**
 
-# Deploy to Vercel
-vercel --prod
-\`\`\`
+### **Design System**
+- **Modern UI** - Clean, professional interface
+- **Responsive Design** - Mobile-first approach
+- **Accessibility** - WCAG 2.1 compliant
+- **Theme Support** - Dark/light mode
+- **Component Library** - Reusable UI components
 
-### Docker Deployment
+### **Navigation**
+```tsx
+// Main navigation tabs
+<TabsList className="grid w-full grid-cols-6 lg:grid-cols-12">
+  <TabsTrigger value="configs">Configurations</TabsTrigger>
+  <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
+  <TabsTrigger value="logging">Logging</TabsTrigger>
+  <TabsTrigger value="scalability">Scalability</TabsTrigger>
+  <TabsTrigger value="ssl">SSL</TabsTrigger>
+  <TabsTrigger value="backup">Backup</TabsTrigger>
+  <TabsTrigger value="loadbalancer">Load Balancer</TabsTrigger>
+  <TabsTrigger value="templates">Templates</TabsTrigger>
+  <TabsTrigger value="logs">Logs</TabsTrigger>
+  <TabsTrigger value="system">System</TabsTrigger>
+</TabsList>
+```
 
-\`\`\`bash
-# Build Docker image
-docker build -t vps-manager-frontend .
+### **Component Structure**
+```
+components/
+├── ui/                    # Base UI components
+│   ├── button.tsx
+│   ├── card.tsx
+│   ├── dialog.tsx
+│   └── ...
+├── config-list.tsx        # Configuration management
+├── create-config-dialog.tsx
+├── edit-config-dialog.tsx
+├── system-status.tsx      # System monitoring
+├── backup-restore.tsx     # Backup management
+├── ssl-manager.tsx        # SSL certificate management
+├── load-balancer.tsx      # Load balancer
+├── config-templates.tsx   # Configuration templates
+├── log-viewer.tsx         # Basic log viewing
+├── real-time-monitoring.tsx # Advanced monitoring
+├── advanced-logging.tsx   # Structured logging
+└── scalability-monitoring.tsx # Performance monitoring
+```
 
-# Run container
-docker run -p 3000:3000 \
-  -e NEXT_PUBLIC_API_URL=http://your-backend:8000 \
-  vps-manager-frontend
-\`\`\`
+## 🚀 **Deployment**
 
-### Static Export
+### **Development**
+```bash
+# Start development server
+pnpm dev
 
-\`\`\`bash
-# Build and export static files
-npm run build
-npm run export
+# Run tests
+pnpm test
 
-# Serve with any web server
-npx serve out/
-\`\`\`
-
-### Traditional Web Server
-
-\`\`\`bash
-# Build the application
-npm run build
-
-# Copy build files to web server
-cp -r .next/static/* /var/www/html/
-cp -r public/* /var/www/html/
-\`\`\`
-
-## 🔍 API Endpoints
-
-The frontend interacts with these backend endpoints:
-
-### Authentication
-- `POST /api/auth/login` - User login
-- `GET /api/auth/me` - Get current user info
-- `POST /api/auth/logout` - User logout
-
-### Configuration Management
-- `GET /api/configs` - List all configurations
-- `POST /api/configs` - Create new configuration
-- `GET /api/configs/{id}` - Get specific configuration
-- `PUT /api/configs/{id}` - Update configuration
-- `DELETE /api/configs/{id}` - Delete configuration
-- `POST /api/configs/{id}/toggle` - Enable/disable configuration
-- `POST /api/configs/{id}/test` - Test configuration
-
-### System Management
-- `GET /api/system/status` - System statistics
-- `POST /api/system/nginx/restart` - Restart Nginx
-- `POST /api/system/nginx/reload` - Reload Nginx config
-- `GET /api/system/nginx/logs` - Get Nginx logs
-
-### Backup Operations
-- `GET /api/backup/list` - List backups
-- `POST /api/backup/create` - Create backup
-- `GET /api/backup/download/{filename}` - Download backup
-- `POST /api/backup/restore/{filename}` - Restore backup
-
-## 🛠️ Development
-
-### Adding New Features
-
-1. **Create Components**: Add new components in `components/`
-2. **Add Routes**: Create new pages in `app/`
-3. **Update Navigation**: Modify `navbar.tsx`
-4. **API Integration**: Add API calls in component files
-5. **Styling**: Use Tailwind classes and shadcn/ui components
-
-### Code Style
-
-- **TypeScript**: Strict type checking enabled
-- **ESLint**: Code linting and formatting
-- **Prettier**: Code formatting (if configured)
-- **Component Structure**: Functional components with hooks
-- **File Naming**: kebab-case for files, PascalCase for components
-
-### Testing
-
-\`\`\`bash
 # Run linting
-npm run lint
+pnpm lint
 
 # Type checking
-npx tsc --noEmit
+pnpm type-check
+```
 
-# Build test
-npm run build
-\`\`\`
+### **Production Build**
+```bash
+# Build for production
+pnpm build
 
-## 🐛 Troubleshooting
+# Start production server
+pnpm start
 
-### Common Issues
+# Export static files
+pnpm export
+```
 
-#### API Connection Failed
-\`\`\`
-Error: Failed to fetch configurations
-\`\`\`
-**Solutions:**
-- Verify backend is running on correct port
-- Check `NEXT_PUBLIC_API_URL` in `.env.local`
-- Ensure CORS is configured in backend
-- Check network connectivity
+### **Docker Deployment**
+```dockerfile
+# Dockerfile
+FROM node:18-alpine AS base
 
-#### Authentication Issues
-\`\`\`
-Error: Invalid authentication credentials
-\`\`\`
-**Solutions:**
-- Clear browser localStorage: `localStorage.clear()`
-- Check if JWT token is expired
-- Verify backend user database
-- Try logging in again
+# Install dependencies
+FROM base AS deps
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+RUN npm install -g pnpm && pnpm install --frozen-lockfile
 
-#### Build Errors
-\`\`\`
-Error: Module not found
-\`\`\`
-**Solutions:**
-- Delete `.next` directory: `rm -rf .next`
-- Clear node_modules: `rm -rf node_modules && npm install`
-- Check TypeScript errors: `npx tsc --noEmit`
-- Verify all imports are correct
+# Build application
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN pnpm build
 
-#### Styling Issues
-\`\`\`
-Styles not loading correctly
-\`\`\`
-**Solutions:**
-- Check Tailwind CSS configuration
-- Verify CSS imports in `globals.css`
-- Clear browser cache
-- Check for CSS conflicts
+# Production image
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV production
 
-### Debug Mode
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-Enable debug logging by setting environment variables:
+EXPOSE 3000
+ENV PORT 3000
 
-\`\`\`bash
-# Enable debug mode
-DEBUG=1 npm run dev
+CMD ["node", "server.js"]
+```
 
-# Verbose logging
-NEXT_PUBLIC_DEBUG=true npm run dev
-\`\`\`
+### **Environment Configuration**
+```bash
+# Production environment variables
+NEXT_PUBLIC_API_URL=https://api.vps-manager.com
+NEXT_PUBLIC_APP_NAME=VPS Manager
+NEXT_PUBLIC_VERSION=2.0.0
+NODE_ENV=production
+```
 
-### Browser Developer Tools
+## 📚 **API Integration**
 
-1. **Network Tab**: Monitor API requests and responses
-2. **Console**: Check for JavaScript errors and warnings
-3. **Application Tab**: Inspect localStorage and session data
-4. **React DevTools**: Debug component state and props
+### **Authentication**
+```typescript
+// JWT token management
+const token = localStorage.getItem('token')
+if (token) {
+  apiClient.setAuthToken(token)
+}
+```
 
-## 🤝 Contributing
+### **WebSocket Connection**
+```typescript
+// Real-time monitoring
+const ws = new WebSocket(`${API_URL}/ws/monitoring?token=${token}`)
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data)
+  // Handle real-time updates
+}
+```
 
-We welcome contributions! Please follow these guidelines:
+### **Error Handling**
+```typescript
+// Global error handling
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Handle authentication errors
+      logout()
+    }
+    return Promise.reject(error)
+  }
+)
+```
 
-### Development Workflow
+## 🔒 **Security**
 
-1. **Fork Repository**: Create your own fork
-2. **Create Branch**: `git checkout -b feature/your-feature-name`
-3. **Make Changes**: Implement your feature or fix
-4. **Test Thoroughly**: Ensure all functionality works
-5. **Commit Changes**: Use conventional commit messages
-6. **Submit PR**: Create a pull request with description
+### **Authentication**
+- **JWT Tokens** - Secure token-based authentication
+- **Token Refresh** - Automatic token renewal
+- **Session Management** - Secure session handling
+- **Logout** - Proper token cleanup
 
-### Code Standards
+### **Data Protection**
+- **HTTPS Only** - Secure communication
+- **Input Validation** - Client-side validation
+- **XSS Protection** - Content Security Policy
+- **CSRF Protection** - Cross-site request forgery protection
 
-- Follow TypeScript best practices
-- Use functional components with hooks
-- Implement proper error handling
-- Add comments for complex logic
-- Ensure responsive design
-- Test on multiple browsers
+### **Privacy**
+- **Data Minimization** - Only collect necessary data
+- **User Consent** - Clear privacy policies
+- **Data Retention** - Configurable retention policies
+- **Audit Logging** - Track user actions
 
-### Commit Messages
+## 🧪 **Testing**
 
-\`\`\`bash
-# Feature
-git commit -m "feat: add SSL certificate management"
+### **Unit Tests**
+```bash
+# Run unit tests
+pnpm test
 
-# Bug fix
-git commit -m "fix: resolve authentication token expiry"
+# Run tests with coverage
+pnpm test:coverage
 
-# Documentation
-git commit -m "docs: update installation guide"
+# Run specific test file
+pnpm test components/real-time-monitoring.test.tsx
+```
 
-# Refactor
-git commit -m "refactor: improve component structure"
-\`\`\`
+### **Integration Tests**
+```bash
+# Run integration tests
+pnpm test:integration
 
-## 📄 License
+# Run E2E tests
+pnpm test:e2e
+```
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+### **Test Structure**
+```
+__tests__/
+├── components/
+│   ├── real-time-monitoring.test.tsx
+│   ├── advanced-logging.test.tsx
+│   └── scalability-monitoring.test.tsx
+├── lib/
+│   └── api.test.ts
+└── utils/
+    └── helpers.test.ts
+```
 
-## 🆘 Support
+## 📖 **Documentation**
 
-### Getting Help
+### **Component Documentation**
+- **Storybook** - Interactive component documentation
+- **TypeScript** - Type definitions and interfaces
+- **JSDoc** - Inline code documentation
+- **README Files** - Component-specific documentation
 
-- **Documentation**: Check this README and project wiki
-- **Issues**: Create an issue on GitHub for bugs or feature requests
-- **Email**: Contact support@surveyorindonesia.com
-- **Community**: Join our Discord server for discussions
+### **API Documentation**
+- **OpenAPI/Swagger** - Interactive API documentation
+- **Type Definitions** - TypeScript interfaces
+- **Example Requests** - Usage examples
+- **Error Codes** - Error handling documentation
 
-### Reporting Bugs
+## 🤝 **Contributing**
 
-When reporting bugs, please include:
+### **Development Setup**
+```bash
+# Fork and clone repository
+git clone <your-fork-url>
+cd vps-manager-frontend
 
-1. **Environment**: OS, browser, Node.js version
-2. **Steps to Reproduce**: Detailed steps to recreate the issue
-3. **Expected Behavior**: What should happen
-4. **Actual Behavior**: What actually happens
-5. **Screenshots**: Visual evidence if applicable
-6. **Console Logs**: Browser console errors
+# Install dependencies
+pnpm install
 
-### Feature Requests
+# Create feature branch
+git checkout -b feature/new-feature
 
-For feature requests, please provide:
+# Make changes and test
+pnpm test
+pnpm lint
+pnpm type-check
 
-1. **Use Case**: Why is this feature needed?
-2. **Description**: Detailed description of the feature
-3. **Mockups**: Visual mockups if applicable
-4. **Priority**: How important is this feature?
+# Commit and push
+git commit -m "feat: add new feature"
+git push origin feature/new-feature
+```
 
-## 🙏 Acknowledgments
+### **Code Style**
+- **ESLint** - Code linting and formatting
+- **Prettier** - Code formatting
+- **TypeScript** - Type safety
+- **Conventional Commits** - Commit message format
 
-- **Next.js Team**: For the amazing React framework
-- **Vercel**: For hosting and deployment platform
-- **shadcn**: For the beautiful UI component library
-- **Tailwind CSS**: For the utility-first CSS framework
-- **Lucide**: For the comprehensive icon library
-- **Surveyor Indonesia**: For project sponsorship and support
+## 📄 **License**
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 **Support**
+
+- **Documentation**: [Wiki](https://github.com/surveyor-indonesia/vps-manager/wiki)
+- **Issues**: [GitHub Issues](https://github.com/surveyor-indonesia/vps-manager/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/surveyor-indonesia/vps-manager/discussions)
 
 ---
 
-**Made with ❤️ by Surveyor Indonesia**
-
-For more information, visit our [website](https://surveyorindonesia.com) or follow us on [GitHub](https://github.com/surveyorindonesia).
+**Surveyor Indonesia - VPS Manager v2.0.0**  
+*Modern Web Interface for Comprehensive VPS Management*

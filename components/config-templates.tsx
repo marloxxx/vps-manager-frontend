@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Globe, Zap, Shield, Database, Code, Smartphone, Server } from "lucide-react"
 import { useState, useEffect } from "react"
 import { Plus } from "lucide-react"
+import { apiClient } from "@/lib/api"
+import { toast } from "@/hooks/use-toast"
 
 interface ConfigTemplate {
   name: string
@@ -25,133 +27,15 @@ export function ConfigTemplates({ onTemplateSelect }: ConfigTemplatesProps) {
   const fetchTemplates = async () => {
     setLoading(true)
     try {
-      // Mock templates for now
-      const mockTemplates: ConfigTemplate[] = [
-        {
-          name: "Basic Web App",
-          description: "Simple reverse proxy for web applications with basic security headers",
-          category: "web",
-          config: {
-            listen_port: 80,
-            security_headers: true,
-            gzip_enabled: true,
-            locations: [
-              {
-                path: "/",
-                backend: "127.0.0.1:3000",
-                websocket: false,
-                ssl_verify: true,
-              },
-            ],
-          },
-        },
-        {
-          name: "API Gateway",
-          description: "API gateway with rate limiting and CORS support",
-          category: "api",
-          config: {
-            listen_port: 80,
-            rate_limit_global: "100r/m",
-            security_headers: true,
-            locations: [
-              {
-                path: "/api/",
-                backend: "127.0.0.1:8080",
-                rate_limit: "10r/s",
-                custom_headers: {
-                  "Access-Control-Allow-Origin": "*",
-                  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-                },
-              },
-            ],
-          },
-        },
-        {
-          name: "WebSocket Application",
-          description: "WebSocket application with upgrade support and connection handling",
-          category: "websocket",
-          config: {
-            listen_port: 80,
-            locations: [
-              {
-                path: "/",
-                backend: "127.0.0.1:3000",
-                websocket: true,
-                proxy_http_version: "1.1",
-              },
-            ],
-          },
-        },
-        {
-          name: "Load Balanced App",
-          description: "Load balanced application with multiple backend servers",
-          category: "load-balancer",
-          config: {
-            listen_port: 80,
-            upstream: {
-              name: "app_backend",
-              method: "round_robin",
-              health_check: true,
-              servers: ["127.0.0.1:3000", "127.0.0.1:3001", "127.0.0.1:3002"],
-            },
-            locations: [
-              {
-                path: "/",
-                backend: "app_backend",
-              },
-            ],
-          },
-        },
-        {
-          name: "Static Site with CDN",
-          description: "Static site hosting with CDN-like caching and compression",
-          category: "static",
-          config: {
-            listen_port: 80,
-            gzip_enabled: true,
-            security_headers: true,
-            locations: [
-              {
-                path: "/",
-                backend: "127.0.0.1:8080",
-                custom_headers: {
-                  "Cache-Control": "public, max-age=31536000",
-                },
-              },
-            ],
-          },
-        },
-        {
-          name: "Microservices Gateway",
-          description: "Gateway for microservices with path-based routing",
-          category: "microservices",
-          config: {
-            listen_port: 80,
-            rate_limit_global: "200r/m",
-            locations: [
-              {
-                path: "/auth/",
-                backend: "127.0.0.1:3001",
-              },
-              {
-                path: "/users/",
-                backend: "127.0.0.1:3002",
-              },
-              {
-                path: "/orders/",
-                backend: "127.0.0.1:3003",
-              },
-              {
-                path: "/",
-                backend: "127.0.0.1:3000",
-              },
-            ],
-          },
-        },
-      ]
-      setTemplates(mockTemplates)
+      const data = await apiClient.getConfigTemplates() as { templates: ConfigTemplate[] }
+      setTemplates(data.templates || [])
     } catch (error) {
-      console.error("Failed to fetch templates:", error)
+      console.error("Failed to fetch config templates:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch config templates",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -166,21 +50,21 @@ export function ConfigTemplates({ onTemplateSelect }: ConfigTemplatesProps) {
       case "web":
         return <Globe className="h-5 w-5" />
       case "api":
-        return <Zap className="h-5 w-5" />
+        return <Code className="h-5 w-5" />
       case "websocket":
-        return <Server className="h-5 w-5" />
+        return <Zap className="h-5 w-5" />
       case "load-balancer":
-        return <Shield className="h-5 w-5" />
-      case "static":
-        return <Globe className="h-5 w-5" />
-      case "microservices":
         return <Server className="h-5 w-5" />
+      case "database":
+        return <Database className="h-5 w-5" />
+      case "mobile":
+        return <Smartphone className="h-5 w-5" />
       default:
-        return <Server className="h-5 w-5" />
+        return <Shield className="h-5 w-5" />
     }
   }
 
-  const getCategoryColorOld = (category: string) => {
+  const getCategoryColor = (category: string) => {
     switch (category) {
       case "web":
         return "bg-blue-100 text-blue-800"
@@ -190,200 +74,162 @@ export function ConfigTemplates({ onTemplateSelect }: ConfigTemplatesProps) {
         return "bg-purple-100 text-purple-800"
       case "load-balancer":
         return "bg-orange-100 text-orange-800"
-      case "static":
-        return "bg-gray-100 text-gray-800"
-      case "microservices":
+      case "database":
         return "bg-red-100 text-red-800"
+      case "mobile":
+        return "bg-pink-100 text-pink-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
   }
 
-  const templates2 = [
-    {
-      id: "web-app",
-      name: "Web Application",
-      description: "Standard web application with static files and API proxy",
-      icon: Globe,
-      category: "Web",
-      config: {
-        listen_port: 80,
-        locations: [
-          { path: "/", backend: "127.0.0.1:3000", websocket: false },
-          { path: "/api", backend: "127.0.0.1:8080", websocket: false },
-        ],
-      },
-    },
-    {
-      id: "spa",
-      name: "Single Page Application",
-      description: "React/Vue/Angular SPA with API backend",
-      icon: Code,
-      category: "Web",
-      config: {
-        listen_port: 80,
-        locations: [
-          { path: "/", backend: "127.0.0.1:3000", websocket: false },
-          { path: "/api", backend: "127.0.0.1:8080", websocket: false },
-        ],
-      },
-    },
-    {
-      id: "websocket",
-      name: "WebSocket Application",
-      description: "Real-time application with WebSocket support",
-      icon: Zap,
-      category: "Real-time",
-      config: {
-        listen_port: 80,
-        locations: [
-          { path: "/", backend: "127.0.0.1:3000", websocket: false },
-          { path: "/ws", backend: "127.0.0.1:3001", websocket: true },
-        ],
-      },
-    },
-    {
-      id: "api-gateway",
-      name: "API Gateway",
-      description: "Microservices API gateway with multiple backends",
-      icon: Database,
-      category: "API",
-      config: {
-        listen_port: 80,
-        locations: [
-          { path: "/auth", backend: "127.0.0.1:8001", websocket: false },
-          { path: "/users", backend: "127.0.0.1:8002", websocket: false },
-          { path: "/orders", backend: "127.0.0.1:8003", websocket: false },
-        ],
-      },
-    },
-    {
-      id: "ssl-app",
-      name: "SSL/HTTPS Application",
-      description: "Secure application with SSL termination",
-      icon: Shield,
-      category: "Security",
-      config: {
-        listen_port: 443,
-        ssl_cert: "/etc/ssl/certs/app.crt",
-        ssl_key: "/etc/ssl/private/app.key",
-        locations: [{ path: "/", backend: "127.0.0.1:3000", websocket: false }],
-      },
-    },
-    {
-      id: "mobile-api",
-      name: "Mobile API Backend",
-      description: "API backend optimized for mobile applications",
-      icon: Smartphone,
-      category: "Mobile",
-      config: {
-        listen_port: 80,
-        locations: [
-          { path: "/api/v1", backend: "127.0.0.1:8080", websocket: false },
-          { path: "/uploads", backend: "127.0.0.1:8081", websocket: false },
-        ],
-      },
-    },
-  ]
-
-  const getIconComponent = (IconComponent: any) => {
-    return <IconComponent className="h-6 w-6" />
-  }
-
-  const getCategoryColor = (category: string) => {
+  const getCategoryName = (category: string) => {
     switch (category) {
-      case "Web":
-        return "bg-blue-100 text-blue-800"
-      case "Real-time":
-        return "bg-green-100 text-green-800"
-      case "API":
-        return "bg-purple-100 text-purple-800"
-      case "Security":
-        return "bg-red-100 text-red-800"
-      case "Mobile":
-        return "bg-orange-100 text-orange-800"
+      case "web":
+        return "Web Application"
+      case "api":
+        return "API Gateway"
+      case "websocket":
+        return "WebSocket"
+      case "load-balancer":
+        return "Load Balancer"
+      case "database":
+        return "Database"
+      case "mobile":
+        return "Mobile App"
       default:
-        return "bg-gray-100 text-gray-800"
+        return category.charAt(0).toUpperCase() + category.slice(1)
     }
   }
 
-  const categories = [...new Set(templates.map((t) => t.category))]
+  const handleTemplateSelect = (template: ConfigTemplate) => {
+    onTemplateSelect(template)
+    toast({
+      title: "Template Selected",
+      description: `${template.name} template has been selected`,
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold">Configuration Templates</h2>
+        </div>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-600 mt-2">Loading templates...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Configuration Templates</h2>
-        <Button variant="outline" size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Custom Template
-        </Button>
-      </div>
-
-      <div className="text-gray-600">
-        Choose from pre-configured templates to quickly set up common reverse proxy scenarios.
-      </div>
-
-      <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold mb-2">Configuration Templates</h2>
-          <p className="text-gray-600">Choose from pre-built templates to quickly set up common configurations.</p>
+          <h2 className="text-2xl font-bold">Configuration Templates</h2>
+          <p className="text-gray-600 mt-1">
+            Choose from pre-configured templates to quickly set up your reverse proxy
+          </p>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {templates2.map((template) => (
-            <Card key={template.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {getIconComponent(template.icon)}
-                    <div>
-                      <CardTitle className="text-lg">{template.name}</CardTitle>
-                      <Badge className={`text-xs ${getCategoryColor(template.category)}`}>{template.category}</Badge>
-                    </div>
+      {/* Template Categories */}
+      <div className="grid gap-6">
+        {templates.map((template, index) => (
+          <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleTemplateSelect(template)}>
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    {getCategoryIcon(template.category)}
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">{template.name}</CardTitle>
+                    <CardDescription className="mt-1">{template.description}</CardDescription>
                   </div>
                 </div>
-                <CardDescription className="mt-2">{template.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="text-sm">
-                    <strong>Includes:</strong>
-                    <ul className="mt-1 space-y-1">
-                      <li>• Port {template.config.listen_port}</li>
-                      <li>
-                        • {template.config.locations.length} location{template.config.locations.length !== 1 ? "s" : ""}
-                      </li>
-                      {template.config.locations.some((loc: any) => loc.websocket) && <li>• WebSocket support</li>}
-                      {template.config.ssl_cert && <li>• SSL/HTTPS enabled</li>}
-                    </ul>
-                  </div>
-                  <Button className="w-full" onClick={() => onTemplateSelect(template)}>
+                <div className="flex items-center space-x-2">
+                  <Badge className={getCategoryColor(template.category)}>
+                    {getCategoryName(template.category)}
+                  </Badge>
+                  <Button size="sm" variant="outline">
+                    <Plus className="h-4 w-4 mr-1" />
                     Use Template
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Port:</span> {template.config.listen_port || 80}
+                  </div>
+                  <div>
+                    <span className="font-medium">Locations:</span> {template.config.locations?.length || 0}
+                  </div>
+                  {template.config.upstream && (
+                    <div>
+                      <span className="font-medium">Upstream:</span> {template.config.upstream.name}
+                    </div>
+                  )}
+                  {template.config.rate_limit_global && (
+                    <div>
+                      <span className="font-medium">Rate Limit:</span> {template.config.rate_limit_global}
+                    </div>
+                  )}
+                </div>
 
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                <Code className="h-5 w-5 text-white" />
+                {template.config.locations && template.config.locations.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-sm mb-2">Locations:</h4>
+                    <div className="space-y-1">
+                      {template.config.locations.map((location: any, locIndex: number) => (
+                        <div key={locIndex} className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                          <span className="font-medium">{location.path}</span> → {location.backend}
+                          {location.websocket && <Badge variant="outline" className="ml-2">WebSocket</Badge>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div>
-                <h3 className="font-semibold text-blue-900">Need a custom template?</h3>
-                <p className="text-blue-700 text-sm">
-                  Contact our support team to create custom templates for your specific use cases.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
+
+        {templates.length === 0 && (
+          <Card>
+            <CardContent className="text-center py-8">
+              <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Templates Available</h3>
+              <p className="text-gray-500">
+                No configuration templates are currently available.
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {loading && <div className="text-center py-8">Loading templates...</div>}
+      {/* Template Categories Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from(new Set(templates.map(t => t.category))).map((category) => {
+          const categoryTemplates = templates.filter(t => t.category === category)
+          return (
+            <Card key={category} className="text-center">
+              <CardContent className="pt-6">
+                <div className="flex justify-center mb-2">
+                  {getCategoryIcon(category)}
+                </div>
+                <h3 className="font-medium">{getCategoryName(category)}</h3>
+                <p className="text-sm text-gray-500">{categoryTemplates.length} template{categoryTemplates.length !== 1 ? 's' : ''}</p>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
     </div>
   )
 }

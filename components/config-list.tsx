@@ -20,7 +20,7 @@ import { MoreHorizontal, Edit, Trash2, Eye, Copy, TestTube, BarChart3 } from "lu
 import { EditConfigDialog } from "./edit-config-dialog"
 import { ConfigDetailsDialog } from "./config-details-dialog"
 import { toast } from "@/hooks/use-toast"
-import { apiClient } from "@/lib/api"
+import { apiClient, API_URL } from "@/lib/api"
 
 interface Config {
   id: string
@@ -90,10 +90,10 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
         server_name: `${config.server_name}_copy`,
         is_active: false,
       }
-      delete newConfig.created_at
-      delete newConfig.updated_at
+      // Remove timestamp fields for new config
+      const { created_at, updated_at, ...configWithoutTimestamps } = newConfig
 
-      await apiClient.createConfig(newConfig)
+      await apiClient.createConfig(configWithoutTimestamps)
       toast({
         title: "Success",
         description: "Configuration duplicated successfully",
@@ -110,7 +110,7 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
 
   const handleTest = async (config: Config) => {
     try {
-      const result = await apiClient.testConfig(config.id)
+      const result = await apiClient.testConfig(config.id) as { success: boolean; error?: string }
       toast({
         title: "Test Result",
         description: result.success ? "Configuration test passed" : `Test failed: ${result.error}`,
@@ -168,7 +168,9 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
           <Card key={config.id} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{config.server_name}</CardTitle>
+                <CardTitle className="text-lg">
+                  {config.server_name || `Port Forward ${config.listen_port}`}
+                </CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant={config.is_active ? "default" : "secondary"}>
                     {config.is_active ? "Active" : "Inactive"}
@@ -197,7 +199,7 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
                         Test Config
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => window.open(`${apiClient.baseUrl}/api/configs/${config.id}/metrics`, "_blank")}
+                        onClick={() => window.open(`${API_URL}/api/configs/${config.id}/metrics`, "_blank")}
                       >
                         <BarChart3 className="h-4 w-4 mr-2" />
                         View Metrics
@@ -211,7 +213,8 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
                 </div>
               </div>
               <CardDescription>
-                Port {config.listen_port} • {config.locations.length} location{config.locations.length !== 1 ? "s" : ""}
+                Port {config.listen_port} • {config.locations.length} {config.server_name ? "location" : "rule"}{config.locations.length !== 1 ? "s" : ""}
+                {!config.server_name && <span className="ml-1 text-blue-600">(Port Forward)</span>}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -222,12 +225,12 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
                 </div>
 
                 <div className="space-y-2">
-                  <span className="text-sm font-medium">Locations:</span>
+                  <span className="text-sm font-medium">{config.server_name ? "Locations:" : "Forward Rules:"}</span>
                   {config.locations.slice(0, 2).map((location, index) => (
                     <div key={index} className="text-sm bg-gray-50 p-2 rounded">
                       <div className="font-mono">{location.path}</div>
                       <div className="text-gray-600 text-xs">→ {location.backend}</div>
-                      {location.websocket && (
+                      {config.server_name && location.websocket && (
                         <Badge variant="outline" className="text-xs mt-1">
                           WebSocket
                         </Badge>
@@ -235,7 +238,7 @@ export function ConfigList({ configs, onConfigsChange, loading }: ConfigListProp
                     </div>
                   ))}
                   {config.locations.length > 2 && (
-                    <div className="text-sm text-gray-500">+{config.locations.length - 2} more locations</div>
+                    <div className="text-sm text-gray-500">+{config.locations.length - 2} more {config.server_name ? "locations" : "rules"}</div>
                   )}
                 </div>
               </div>

@@ -1,37 +1,56 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Shield, Plus, Calendar, AlertTriangle, CheckCircle } from "lucide-react"
+import { Shield, Plus, Calendar, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { apiClient } from "@/lib/api"
+
+interface SSLCertificate {
+  domain: string
+  issuer: string
+  expires: string
+  status: string
+  auto_renew: boolean
+  cert_path?: string
+  key_path?: string
+}
 
 export function SSLManager() {
-  const [certificates] = useState([
-    {
-      domain: "*.ptsi.co.id",
-      issuer: "Let's Encrypt",
-      expires: "2024-12-31",
-      status: "valid",
-      autoRenew: true,
-    },
-    {
-      domain: "example.com",
-      issuer: "Custom CA",
-      expires: "2024-06-15",
-      status: "expiring",
-      autoRenew: false,
-    },
-  ])
-
+  const [certificates, setCertificates] = useState<SSLCertificate[]>([])
+  const [loading, setLoading] = useState(false)
+  const [requesting, setRequesting] = useState(false)
+  const [renewing, setRenewing] = useState<string | null>(null)
   const [newCert, setNewCert] = useState({
     domain: "",
     certPath: "",
     keyPath: "",
   })
+
+  const fetchCertificates = async () => {
+    setLoading(true)
+    try {
+      const data = await apiClient.getSSLCertificates() as { certificates: SSLCertificate[] }
+      setCertificates(data.certificates || [])
+    } catch (error) {
+      console.error("Failed to fetch SSL certificates:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch SSL certificates",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchCertificates()
+  }, [])
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -58,38 +77,81 @@ export function SSLManager() {
     }
   }
 
-  const handleAddCertificate = () => {
-    if (!newCert.domain || !newCert.certPath || !newCert.keyPath) {
+  const handleRequestLetsEncrypt = async () => {
+    if (!newCert.domain) {
       toast({
         title: "Error",
-        description: "Please fill in all fields",
+        description: "Please enter a domain name",
         variant: "destructive",
       })
       return
     }
 
-    toast({
-      title: "Success",
-      description: "SSL certificate added successfully",
-    })
-
-    setNewCert({ domain: "", certPath: "", keyPath: "" })
+    setRequesting(true)
+    try {
+      await apiClient.requestLetsEncryptCertificate(newCert.domain)
+      toast({
+        title: "Success",
+        description: `Let's Encrypt certificate requested for ${newCert.domain}`,
+      })
+      setNewCert({ domain: "", certPath: "", keyPath: "" })
+      fetchCertificates()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to request Let's Encrypt certificate",
+        variant: "destructive",
+      })
+    } finally {
+      setRequesting(false)
+    }
   }
 
-  const renewCertificate = (domain: string) => {
-    toast({
-      title: "Certificate Renewal",
-      description: `Renewing certificate for ${domain}...`,
-    })
+  const renewCertificate = async (domain: string) => {
+    setRenewing(domain)
+    try {
+      await apiClient.renewSSLCertificate(domain)
+      toast({
+        title: "Success",
+        description: `Certificate renewed for ${domain}`,
+      })
+      fetchCertificates()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to renew certificate",
+        variant: "destructive",
+      })
+    } finally {
+      setRenewing(null)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold">SSL Certificate Manager</h2>
+          <Button disabled>
+            <Plus className="h-4 w-4 mr-2" />
+            Request Let's Encrypt Certificate
+          </Button>
+        </div>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-600 mt-2">Loading certificates...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">SSL Certificate Manager</h2>
-        <Button>
+        <Button onClick={handleRequestLetsEncrypt} disabled={requesting}>
           <Plus className="h-4 w-4 mr-2" />
-          Request Let's Encrypt Certificate
+          {requesting ? "Requesting..." : "Request Let's Encrypt Certificate"}
         </Button>
       </div>
 
@@ -99,88 +161,89 @@ export function SSLManager() {
           <Card key={index}>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
+                <div className="flex items-center space-x-3">
                   {getStatusIcon(cert.status)}
-                  {cert.domain}
-                </CardTitle>
-                <div className="flex items-center gap-2">
+                  <div>
+                    <CardTitle className="text-lg">{cert.domain}</CardTitle>
+                    <p className="text-sm text-gray-500">{cert.issuer}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
                   {getStatusBadge(cert.status)}
-                  {cert.autoRenew && <Badge variant="outline">Auto-Renew</Badge>}
+                  {cert.status === "expiring" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => renewCertificate(cert.domain)}
+                      disabled={renewing === cert.domain}
+                    >
+                      {renewing === cert.domain ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      Renew
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <Label className="text-sm text-gray-600">Issuer</Label>
-                  <p className="font-medium">{cert.issuer}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm">
+                    Expires: {cert.expires || "Unknown"}
+                  </span>
                 </div>
-                <div>
-                  <Label className="text-sm text-gray-600">Expires</Label>
-                  <p className="font-medium flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    {cert.expires}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm text-gray-600">Auto Renewal</Label>
-                  <p className="font-medium">{cert.autoRenew ? "Enabled" : "Disabled"}</p>
-                </div>
-                <div className="flex items-end">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => renewCertificate(cert.domain)}
-                    disabled={cert.status === "valid"}
-                  >
-                    Renew Now
-                  </Button>
+                <div className="flex items-center space-x-2">
+                  <Shield className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm">
+                    Auto-renew: {cert.auto_renew ? "Enabled" : "Disabled"}
+                  </span>
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
+
+        {certificates.length === 0 && (
+          <Card>
+            <CardContent className="text-center py-8">
+              <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No SSL Certificates</h3>
+              <p className="text-gray-500 mb-4">
+                No SSL certificates found. Request a Let's Encrypt certificate to get started.
+              </p>
+              <Button onClick={handleRequestLetsEncrypt} disabled={requesting}>
+                <Plus className="h-4 w-4 mr-2" />
+                Request Certificate
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {/* Add Custom Certificate */}
+      {/* Request New Certificate */}
       <Card>
         <CardHeader>
-          <CardTitle>Add Custom SSL Certificate</CardTitle>
+          <CardTitle>Request Let's Encrypt Certificate</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="domain">Domain</Label>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="domain">Domain Name</Label>
               <Input
                 id="domain"
+                placeholder="example.com"
                 value={newCert.domain}
                 onChange={(e) => setNewCert({ ...newCert, domain: e.target.value })}
-                placeholder="example.com"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="certPath">Certificate Path</Label>
-              <Input
-                id="certPath"
-                value={newCert.certPath}
-                onChange={(e) => setNewCert({ ...newCert, certPath: e.target.value })}
-                placeholder="/path/to/certificate.crt"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="keyPath">Private Key Path</Label>
-              <Input
-                id="keyPath"
-                value={newCert.keyPath}
-                onChange={(e) => setNewCert({ ...newCert, keyPath: e.target.value })}
-                placeholder="/path/to/private.key"
-              />
-            </div>
+            <Button onClick={handleRequestLetsEncrypt} disabled={requesting || !newCert.domain}>
+              {requesting ? "Requesting..." : "Request Certificate"}
+            </Button>
           </div>
-          <Button onClick={handleAddCertificate}>
-            <Shield className="h-4 w-4 mr-2" />
-            Add Certificate
-          </Button>
         </CardContent>
       </Card>
     </div>
