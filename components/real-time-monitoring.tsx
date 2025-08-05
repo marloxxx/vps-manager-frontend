@@ -7,15 +7,15 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Activity, 
-  AlertTriangle, 
-  CheckCircle, 
-  Cpu, 
-  HardDrive, 
-  Memory, 
-  Network, 
-  Server, 
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  Cpu,
+  HardDrive,
+  MemoryStick,
+  Network,
+  Server,
   TrendingUp,
   Clock,
   Zap
@@ -63,7 +63,7 @@ export default function RealTimeMonitoring() {
   const [loading, setLoading] = useState(true)
   const [selectedTimeRange, setSelectedTimeRange] = useState('1h')
   const [metricsHistory, setMetricsHistory] = useState<SystemMetrics[]>([])
-  
+
   const wsRef = useRef<WebSocket | null>(null)
   const { toast } = useToast()
 
@@ -125,16 +125,16 @@ export default function RealTimeMonitoring() {
     const loadInitialData = async () => {
       try {
         setLoading(true)
-        
+
         // Load current metrics
         const metricsData = await getCurrentMetrics()
         setMetrics(metricsData.current)
         setAlerts(metricsData.alerts || [])
-        
+
         // Load metrics history
         const historyData = await getMetricsHistory(parseInt(selectedTimeRange))
         setMetricsHistory(historyData.metrics || [])
-        
+
       } catch (error) {
         console.error('Failed to load initial data:', error)
         toast({
@@ -187,7 +187,7 @@ export default function RealTimeMonitoring() {
       case 'cpu_usage':
         return <Cpu className="h-4 w-4" />
       case 'memory_usage':
-        return <Memory className="h-4 w-4" />
+        return <MemoryStick className="h-4 w-4" />
       case 'disk_usage':
         return <HardDrive className="h-4 w-4" />
       case 'network_in':
@@ -295,7 +295,7 @@ export default function RealTimeMonitoring() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Memory Usage</CardTitle>
-            <Memory className={`h-4 w-4 ${getMetricColor(metrics?.memory_usage || 0)}`} />
+            <MemoryStick className={`h-4 w-4 ${getMetricColor(metrics?.memory_usage || 0)}`} />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics?.memory_usage?.toFixed(1) || 0}%</div>
@@ -423,7 +423,7 @@ export default function RealTimeMonitoring() {
               <option value="168">7 days</option>
             </select>
           </div>
-          
+
           {metricsHistory.length > 0 ? (
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
@@ -445,7 +445,7 @@ export default function RealTimeMonitoring() {
                     ))}
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Memory Trend</span>
@@ -464,7 +464,7 @@ export default function RealTimeMonitoring() {
                     ))}
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Disk Trend</span>
@@ -484,7 +484,7 @@ export default function RealTimeMonitoring() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="text-xs text-muted-foreground">
                 Showing last {Math.min(metricsHistory.length, 10)} data points
               </div>
